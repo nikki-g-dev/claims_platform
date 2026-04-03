@@ -1,85 +1,12 @@
-const STORAGE_KEY = "claims-platform-demo-data";
-
-const seedClaims = [
-  {
-    id: "CLM-24018",
-    claimantName: "Ariana Patel",
-    policyNumber: "AUTO-10293",
-    claimType: "Auto",
-    incidentDate: "2026-03-26",
-    claimedAmount: 8400,
-    severity: "High",
-    status: "In Review",
-    description: "Rear-end collision during heavy rain. Vehicle needs body work, bumper replacement, and sensor recalibration.",
-    documents: ["Claim form", "Photo evidence", "Police report", "Repair estimate"],
-    timeline: [
-      { label: "Claim submitted", date: "2026-03-26", note: "FNOL received via mobile intake." },
-      { label: "Coverage verified", date: "2026-03-27", note: "Policy active with collision coverage." },
-      { label: "Assigned to adjuster", date: "2026-03-28", note: "Escalated for parts delay review." }
-    ],
-    nextActions: ["Confirm rental car eligibility", "Approve repair estimate", "Contact body shop for timeline"]
-  },
-  {
-    id: "CLM-24019",
-    claimantName: "Marcus Chen",
-    policyNumber: "HOME-44180",
-    claimType: "Property",
-    incidentDate: "2026-03-20",
-    claimedAmount: 16200,
-    severity: "Critical",
-    status: "Pending Documents",
-    description: "Kitchen pipe burst caused cabinet and flooring damage. Temporary mitigation completed, final contractor bid still pending.",
-    documents: ["Claim form", "Photo evidence"],
-    timeline: [
-      { label: "Claim submitted", date: "2026-03-21", note: "Emergency mitigation vendor dispatched." },
-      { label: "Inspection scheduled", date: "2026-03-22", note: "On-site review planned within 24 hours." },
-      { label: "Documents outstanding", date: "2026-03-24", note: "Awaiting contractor estimate and plumbing invoice." }
-    ],
-    nextActions: ["Collect contractor bid", "Set reserve after estimate", "Confirm mold prevention steps"]
-  },
-  {
-    id: "CLM-24020",
-    claimantName: "Natalie Brooks",
-    policyNumber: "HLTH-77129",
-    claimType: "Health",
-    incidentDate: "2026-03-14",
-    claimedAmount: 3200,
-    severity: "Medium",
-    status: "Approved",
-    description: "Outpatient procedure reimbursement after pre-authorization confirmation and itemized billing review.",
-    documents: ["Claim form", "Medical report"],
-    timeline: [
-      { label: "Claim submitted", date: "2026-03-15", note: "Digital reimbursement packet received." },
-      { label: "Clinical review", date: "2026-03-17", note: "Procedure matched approved treatment plan." },
-      { label: "Approved for payment", date: "2026-03-19", note: "Payment released to claimant." }
-    ],
-    nextActions: ["Send EOB summary", "Confirm member received payment"]
-  },
-  {
-    id: "CLM-24021",
-    claimantName: "David Romero",
-    policyNumber: "TRVL-22091",
-    claimType: "Travel",
-    incidentDate: "2026-03-29",
-    claimedAmount: 1800,
-    severity: "Low",
-    status: "Submitted",
-    description: "Flight cancellation and overnight stay caused additional lodging and meal expenses during business travel.",
-    documents: ["Claim form", "Photo evidence"],
-    timeline: [
-      { label: "Claim submitted", date: "2026-03-30", note: "Receipts attached for hotel and meals." }
-    ],
-    nextActions: ["Verify trip cancellation reason", "Review receipt eligibility"]
-  }
-];
-
 const state = {
-  claims: loadClaims(),
+  claims: [],
   selectedClaimId: null,
   filters: {
     search: "",
     status: "all"
-  }
+  },
+  loading: true,
+  error: null
 };
 
 const elements = {
@@ -110,18 +37,10 @@ const elements = {
 
 initialize();
 
-function initialize() {
+async function initialize() {
   setTodayDate();
-  if (!state.selectedClaimId && state.claims.length > 0) {
-    state.selectedClaimId = state.claims[0].id;
-  }
-
-  elements.claimForm.addEventListener("submit", handleClaimSubmit);
-  elements.searchInput.addEventListener("input", handleSearchChange);
-  elements.statusFilter.addEventListener("change", handleStatusChange);
-  elements.loadSampleDataButton.addEventListener("click", reloadSampleData);
-  elements.navButtons.forEach((button) => button.addEventListener("click", handlePanelJump));
-
+  wireEvents();
+  await fetchClaims();
   render();
 }
 
@@ -134,26 +53,32 @@ function setTodayDate() {
   elements.todayDate.textContent = formatter.format(new Date());
 }
 
-function loadClaims() {
-  const saved = localStorage.getItem(STORAGE_KEY);
-  if (!saved) {
-    return structuredClone(seedClaims);
-  }
-
-  try {
-    const parsed = JSON.parse(saved);
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed : structuredClone(seedClaims);
-  } catch (error) {
-    return structuredClone(seedClaims);
-  }
+function wireEvents() {
+  elements.claimForm.addEventListener("submit", handleClaimSubmit);
+  elements.searchInput.addEventListener("input", handleSearchChange);
+  elements.statusFilter.addEventListener("change", handleStatusChange);
+  elements.loadSampleDataButton.addEventListener("click", reloadSampleData);
+  elements.navButtons.forEach((button) => button.addEventListener("click", handlePanelJump));
 }
 
-function persistClaims() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state.claims));
+async function fetchClaims() {
+  state.loading = true;
+  state.error = null;
+  try {
+    const response = await fetch("/api/claims");
+    if (!response.ok) throw new Error(`API ${response.status}`);
+    state.claims = await response.json();
+    state.selectedClaimId = state.claims[0]?.id || null;
+  } catch (error) {
+    state.error = "API unavailable. Showing empty state.";
+    state.claims = [];
+    state.selectedClaimId = null;
+  } finally {
+    state.loading = false;
+  }
 }
 
 function render() {
-  persistClaims();
   renderStats();
   renderSegments();
   renderPriority();
@@ -250,6 +175,20 @@ function renderPriority() {
 function renderTable() {
   const filteredClaims = getFilteredClaims();
   elements.claimsTableBody.innerHTML = "";
+
+  if (state.loading) {
+    elements.claimsTableBody.innerHTML = `
+      <tr><td colspan="6"><div class="empty-state">Loading claims…</div></td></tr>
+    `;
+    return;
+  }
+
+  if (state.error) {
+    elements.claimsTableBody.innerHTML = `
+      <tr><td colspan="6"><div class="empty-state">${state.error}</div></td></tr>
+    `;
+    return;
+  }
 
   if (filteredClaims.length === 0) {
     elements.claimsTableBody.innerHTML = `
@@ -387,40 +326,37 @@ function getFilteredClaims() {
   });
 }
 
-function handleClaimSubmit(event) {
+async function handleClaimSubmit(event) {
   event.preventDefault();
-
   const formData = new FormData(event.currentTarget);
   const documents = formData.getAll("documents");
-  const claim = {
-    id: nextClaimId(),
+  const payload = {
     claimantName: formData.get("claimantName").trim(),
     policyNumber: formData.get("policyNumber").trim(),
     claimType: formData.get("claimType"),
     incidentDate: formData.get("incidentDate"),
     claimedAmount: Number(formData.get("claimedAmount")),
     severity: formData.get("severity"),
-    status: documents.length >= 2 ? "Submitted" : "Pending Documents",
     description: formData.get("description").trim(),
-    documents,
-    timeline: [
-      {
-        label: "Claim submitted",
-        date: new Date().toISOString().slice(0, 10),
-        note: "Claim created from the intake dashboard."
-      }
-    ],
-    nextActions:
-      documents.length >= 2
-        ? ["Assign claim owner", "Verify coverage", "Review reserve amount"]
-        : ["Request missing documentation", "Verify coverage"]
+    documents
   };
 
-  state.claims.unshift(claim);
-  state.selectedClaimId = claim.id;
-  event.currentTarget.reset();
-  elements.formMessage.textContent = `${claim.id} created for ${claim.claimantName}.`;
-  render();
+  try {
+    const response = await fetch("/api/claims", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) throw new Error("Failed to create claim");
+    const created = await response.json();
+    state.claims.unshift(created);
+    state.selectedClaimId = created.id;
+    event.currentTarget.reset();
+    elements.formMessage.textContent = `${created.id} created for ${created.claimantName}.`;
+    render();
+  } catch (error) {
+    elements.formMessage.textContent = "Could not submit claim. Try again.";
+  }
 }
 
 function handleSearchChange(event) {
@@ -433,11 +369,17 @@ function handleStatusChange(event) {
   renderTable();
 }
 
-function reloadSampleData() {
-  state.claims = structuredClone(seedClaims);
-  state.selectedClaimId = state.claims[0]?.id || null;
-  elements.formMessage.textContent = "Demo data restored.";
-  render();
+async function reloadSampleData() {
+  elements.formMessage.textContent = "Reloading demo data…";
+  try {
+    const response = await fetch("/api/seed", { method: "POST" });
+    if (!response.ok) throw new Error();
+    await fetchClaims();
+    render();
+    elements.formMessage.textContent = "Demo data restored from server.";
+  } catch {
+    elements.formMessage.textContent = "Unable to reload demo data.";
+  }
 }
 
 function handlePanelJump(event) {
@@ -456,15 +398,6 @@ function handlePanelJump(event) {
   };
 
   targetMap[target]?.scrollIntoView({ behavior: "smooth", block: "start" });
-}
-
-function nextClaimId() {
-  const numericIds = state.claims
-    .map((claim) => Number(claim.id.replace("CLM-", "")))
-    .filter((value) => !Number.isNaN(value));
-
-  const next = numericIds.length ? Math.max(...numericIds) + 1 : 24001;
-  return `CLM-${next}`;
 }
 
 function severityWeight(severity) {

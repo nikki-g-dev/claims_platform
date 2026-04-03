@@ -6,6 +6,7 @@
 
 # Dependencies
 node_modules/
+data/*.db
 
 # Build output
 dist/

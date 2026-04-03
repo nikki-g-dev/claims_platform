@@ -1,0 +1,18 @@
+{
+  "name": "claims_platform",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Full-stack claims platform with Express API and SQLite",
+  "scripts": {
+    "dev": "nodemon server.js",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^9.4.0",
+    "compression": "^1.7.4",
+    "express": "^4.19.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
+  }
+}
