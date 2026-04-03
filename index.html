@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Claims Platform</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark">CP</div>
+          <div>
+            <p class="eyebrow">Operations suite</p>
+            <h1>Claims Platform</h1>
+          </div>
+        </div>
+
+        <nav class="nav">
+          <button class="nav-link active" data-panel-target="overview">Overview</button>
+          <button class="nav-link" data-panel-target="intake">Claim Intake</button>
+          <button class="nav-link" data-panel-target="queue">Review Queue</button>
+          <button class="nav-link" data-panel-target="insights">Insights</button>
+        </nav>
+
+        <section class="sidebar-card">
+          <p class="eyebrow">Today</p>
+          <h2 id="todayDate">April 2, 2026</h2>
+          <p id="sidebarSummary">
+            0 open claims are waiting for review.
+          </p>
+        </section>
+
+        <section class="sidebar-card accent-card">
+          <p class="eyebrow">Service pledge</p>
+          <h2>Decision within 48 hours</h2>
+          <p>
+            Prioritize high-severity claims, surface missing documents early, and keep adjusters focused on action items.
+          </p>
+        </section>
+      </aside>
+
+      <main class="main-content">
+        <header class="hero">
+          <div>
+            <p class="eyebrow">Claims command center</p>
+            <h2>Manage intake, review coverage, and resolve claims with clarity.</h2>
+          </div>
+          <div class="hero-actions">
+            <button class="ghost-button" id="loadSampleDataButton">Reload demo data</button>
+            <button class="primary-button" data-panel-target="intake">Create a claim</button>
+          </div>
+        </header>
+
+        <section class="stats-grid" id="statsGrid">
+          <article class="stat-card">
+            <p>Total claims</p>
+            <strong id="statTotalClaims">0</strong>
+            <span id="statTotalDelta">No records yet</span>
+          </article>
+          <article class="stat-card">
+            <p>Open exposure</p>
+            <strong id="statOpenExposure">$0</strong>
+            <span id="statOpenDelta">Awaiting submissions</span>
+          </article>
+          <article class="stat-card">
+            <p>Critical claims</p>
+            <strong id="statCriticalClaims">0</strong>
+            <span id="statCriticalDelta">No urgent investigations</span>
+          </article>
+          <article class="stat-card">
+            <p>Average turnaround</p>
+            <strong id="statTurnaround">0 days</strong>
+            <span id="statTurnaroundDelta">Based on closed claims</span>
+          </article>
+        </section>
+
+        <section class="content-grid">
+          <section class="panel panel-wide" id="overviewPanel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Portfolio mix</p>
+                <h3>Claims by line of business</h3>
+              </div>
+              <span class="pill">Live snapshot</span>
+            </div>
+            <div class="segment-list" id="segmentList"></div>
+          </section>
+
+          <section class="panel" id="priorityPanel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Escalations</p>
+                <h3>Immediate attention</h3>
+              </div>
+            </div>
+            <div class="priority-list" id="priorityList"></div>
+          </section>
+
+          <section class="panel panel-wide" id="queuePanel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Review queue</p>
+                <h3>Current claims</h3>
+              </div>
+              <div class="filters">
+                <input
+                  id="searchInput"
+                  class="search-input"
+                  type="search"
+                  placeholder="Search by claimant, policy, or type"
+                />
+                <select id="statusFilter" class="select-input">
+                  <option value="all">All statuses</option>
+                  <option value="Submitted">Submitted</option>
+                  <option value="In Review">In Review</option>
+                  <option value="Pending Documents">Pending Documents</option>
+                  <option value="Approved">Approved</option>
+                  <option value="Rejected">Rejected</option>
+                </select>
+              </div>
+            </div>
+            <div class="claims-table-wrapper">
+              <table class="claims-table">
+                <thead>
+                  <tr>
+                    <th>Claim</th>
+                    <th>Type</th>
+                    <th>Status</th>
+                    <th>Severity</th>
+                    <th>Amount</th>
+                    <th>Updated</th>
+                  </tr>
+                </thead>
+                <tbody id="claimsTableBody"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="panel" id="detailPanel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Claim detail</p>
+                <h3 id="detailTitle">Select a claim</h3>
+              </div>
+            </div>
+            <div id="detailContent" class="detail-empty">
+              Choose a claim from the queue to review documents, timeline, and next actions.
+            </div>
+          </section>
+
+          <section class="panel panel-wide" id="formPanel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">New submission</p>
+                <h3>Create a claim</h3>
+              </div>
+            </div>
+            <form id="claimForm" class="claim-form">
+              <label>
+                Claimant name
+                <input type="text" name="claimantName" required placeholder="Jordan Lee" />
+              </label>
+              <label>
+                Policy number
+                <input type="text" name="policyNumber" required placeholder="PL-39204" />
+              </label>
+              <label>
+                Claim type
+                <select name="claimType" required>
+                  <option value="Auto">Auto</option>
+                  <option value="Property">Property</option>
+                  <option value="Health">Health</option>
+                  <option value="Travel">Travel</option>
+                  <option value="Liability">Liability</option>
+                </select>
+              </label>
+              <label>
+                Incident date
+                <input type="date" name="incidentDate" required />
+              </label>
+              <label>
+                Claimed amount
+                <input type="number" name="claimedAmount" required min="0" step="100" placeholder="5000" />
+              </label>
+              <label>
+                Severity
+                <select name="severity" required>
+                  <option value="Low">Low</option>
+                  <option value="Medium">Medium</option>
+                  <option value="High">High</option>
+                  <option value="Critical">Critical</option>
+                </select>
+              </label>
+              <label class="full-width">
+                Description
+                <textarea
+                  name="description"
+                  rows="4"
+                  required
+                  placeholder="Describe the incident, impacted assets, and any urgent concerns."
+                ></textarea>
+              </label>
+              <fieldset class="full-width checklist">
+                <legend>Documents received</legend>
+                <label><input type="checkbox" name="documents" value="Claim form" checked /> Claim form</label>
+                <label><input type="checkbox" name="documents" value="Photo evidence" /> Photo evidence</label>
+                <label><input type="checkbox" name="documents" value="Police report" /> Police report</label>
+                <label><input type="checkbox" name="documents" value="Medical report" /> Medical report</label>
+                <label><input type="checkbox" name="documents" value="Repair estimate" /> Repair estimate</label>
+              </fieldset>
+              <div class="form-actions full-width">
+                <p id="formMessage" class="form-message" aria-live="polite"></p>
+                <button type="submit" class="primary-button">Submit claim</button>
+              </div>
+            </form>
+          </section>
+
+          <section class="panel" id="insightsPanel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Insights</p>
+                <h3>Operational recommendations</h3>
+              </div>
+            </div>
+            <div id="insightList" class="insight-list"></div>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <template id="claimDetailTemplate">
+      <div class="detail-card">
+        <div class="detail-topline">
+          <div>
+            <p class="eyebrow" id="detailClaimId"></p>
+            <h4 id="detailClaimant"></h4>
+          </div>
+          <span class="pill" id="detailStatus"></span>
+        </div>
+        <p class="detail-description" id="detailDescription"></p>
+        <div class="detail-metrics">
+          <article>
+            <span>Policy</span>
+            <strong id="detailPolicy"></strong>
+          </article>
+          <article>
+            <span>Claim type</span>
+            <strong id="detailType"></strong>
+          </article>
+          <article>
+            <span>Severity</span>
+            <strong id="detailSeverity"></strong>
+          </article>
+          <article>
+            <span>Reserve</span>
+            <strong id="detailAmount"></strong>
+          </article>
+        </div>
+        <div class="detail-sections">
+          <section>
+            <h5>Documents</h5>
+            <ul id="detailDocuments"></ul>
+          </section>
+          <section>
+            <h5>Next actions</h5>
+            <ul id="detailActions"></ul>
+          </section>
+        </div>
+        <section>
+          <h5>Activity timeline</h5>
+          <ol class="timeline" id="detailTimeline"></ol>
+        </section>
+      </div>
+    </template>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
